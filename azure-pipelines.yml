@@ -1,21 +1,38 @@
-# Node.js
-# Build a general Node.js project with npm.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
-- main
+- main  # Esto indica que el pipeline se ejecutará cuando se haga un push a la rama 'main'
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'  # El tipo de máquina que se usará para ejecutar el pipeline (puede ser Windows, Ubuntu, etc.)
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+variables:
+  azureSubscription: 'demo-from-azure-devops'  # Nombre de la suscripción de Azure configurada en DevOps
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+stages:
+- stage: Build
+  jobs:
+  - job: BuildApp
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: '6.x'
+        installationPath: $(Agent.ToolsDirectory)/dotnet
+    - script: |
+        echo "Construyendo la aplicación..."
+        dotnet build
+      displayName: 'Compilar la aplicación'
+
+- stage: Deploy
+  jobs:
+  - job: DeployToAzure
+    steps:
+    - task: AzureCLI@2  # Este task usa la Azure CLI para ejecutar comandos en tu suscripción de Azure
+      inputs:
+        azureSubscription: $(azureSubscription)  # Se autentica usando tu Azure Subscription
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          echo "Desplegando en Azure..."
+          # Aquí van los comandos de despliegue, por ejemplo, crear una web app:
+          az webapp up --name mi-app --resource-group mi-grupo-de-recursos
+      displayName: 'Desplegar a Azure'
