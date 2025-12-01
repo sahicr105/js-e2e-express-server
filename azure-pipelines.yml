@@ -3,6 +3,7 @@ trigger:
 
 pool:
   vmImage: 'ubuntu-latest'  # El tipo de máquina que se usará para ejecutar el pipeline (puede ser Windows, Ubuntu, etc.)
+  name: 'DESKTOP-NL4DEQA'
 
 variables:
   azureSubscription: 'demo-from-azure-devops'  # Nombre de la suscripción de Azure configurada en DevOps
