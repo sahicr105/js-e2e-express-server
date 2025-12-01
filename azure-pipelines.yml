@@ -3,6 +3,7 @@ trigger:
 
 pool:
   vmImage: 'ubuntu-latest'  # Usamos el agente hospedado por Azure (ubuntu-latest)
+  name: Default
 
 steps:
   # Instalar Node.js
