@@ -1,45 +1,36 @@
 trigger:
-- main  # El pipeline se ejecutará cuando haya cambios en la rama 'main'
+  - another-test  # Cambia a tu rama principal si es necesario
 
 pool:
-  vmImage: 'ubuntu-latest'  # Usamos Ubuntu como agente para ejecutar el pipeline
+  vmImage: 'ubuntu-latest'  # Usamos el agente hospedado por Azure (ubuntu-latest)
 
-variables:
-  azureSubscription: 'demo-from-azure-devops'  # Nombre de tu suscripción de Azure configurada en DevOps
-  appName: 'mywebX'  # El nombre de tu web app en Azure (debe ser único globalmente)
-  resourceGroup: 'mi-grupo-de-recursos'  # Asegúrate de que este grupo de recursos exista en Azure
+steps:
+  # Instalar Node.js
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '20.x'
+    displayName: 'Instalar Node.js'
 
-stages:
-- stage: Build
-  jobs:
-  - job: BuildApp
-    steps:
-    - task: UseDotNet@2
-      inputs:
-        packageType: 'sdk'
-        version: '6.x'
-        installationPath: $(Agent.ToolsDirectory)/dotnet
-    - script: |
-        echo "Construyendo la aplicación..."
-        dotnet build
-      displayName: 'Compilar la aplicación'
+  # Instalar dependencias y compilar
+  - script: |
+      npm install
+      npm run build
+    displayName: 'Instalar dependencias y compilar'
 
-- stage: Deploy
-  jobs:
-  - job: DeployToAzure
-    steps:
-    - task: AzureCLI@2  # Usamos Azure CLI para ejecutar comandos en tu suscripción de Azure
-      inputs:
-        azureSubscription: $(azureSubscription)  # Autenticación mediante tu Azure Subscription
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          echo "Desplegando en Azure..."
-          
-          # Comando para crear el grupo de recursos si no existe
-          az group create --name $(resourceGroup) --location eastus
+  # Publicar archivos como ZIP para despliegue
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/app.zip'
+      replaceExistingArchive: true
+    displayName: 'Crear paquete ZIP'
 
-          # Desplegar la Web App
-          az webapp up --name $(appName) --resource-group $(resourceGroup) --sku F1 --location eastus
-
-      displayName: 'Desplegar a Azure'
+  # Desplegar en Azure Web App
+  - task: AzureWebApp@1
+    inputs:
+      azureSubscription: 'connection'  # Asegúrate de que este sea el nombre de tu suscripción de Azure en DevOps
+      appName: 'mywebX'  # Asegúrate de que este nombre corresponda con el de tu Web App
+      package: '$(Build.ArtifactStagingDirectory)/app.zip'
+    displayName: 'Desplegar en Azure Web App'
